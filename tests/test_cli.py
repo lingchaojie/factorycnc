@@ -178,6 +178,52 @@ def test_cli_rejects_output_path_matching_input_file(tmp_path, capsys):
     assert input_path.read_text(encoding="utf-8") == original_content
 
 
+def test_cli_rejects_hard_link_output_path_matching_input_file(tmp_path, capsys):
+    input_path = tmp_path / "part.step"
+    output_path = tmp_path / "report.step"
+    original_content = "ISO-10303-21;\nEND-ISO-10303-21;\n"
+    input_path.write_text(original_content, encoding="utf-8")
+    output_path.hardlink_to(input_path)
+
+    def analyze_file(path: Path, source_format: str):
+        return {
+            "model": {
+                "is_null": False,
+                "bounding_box": {
+                    "min": [0.0, 0.0, 0.0],
+                    "max": [1.0, 2.0, 3.0],
+                    "size": [1.0, 2.0, 3.0],
+                },
+                "area": 22.0,
+                "volume": 6.0,
+            },
+            "topology": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 6,
+                "wires": 6,
+                "edges": 12,
+                "vertices": 8,
+            },
+            "geometry": {
+                "face_surface_types": {"plane": 6},
+                "edge_curve_types": {"line": 12},
+            },
+            "faces": [],
+            "edges": [],
+        }
+
+    exit_code = main(
+        [str(input_path), "--output", str(output_path)], analyze_file=analyze_file
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Output path must be different from input file" in captured.err
+    assert input_path.read_text(encoding="utf-8") == original_content
+
+
+
 def test_cli_reports_output_write_failure(tmp_path, capsys, monkeypatch):
     input_path = tmp_path / "part.step"
     input_path.write_text("ISO-10303-21;\nEND-ISO-10303-21;\n", encoding="utf-8")
