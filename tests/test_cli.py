@@ -2,8 +2,12 @@ import json
 from pathlib import Path
 
 import pytest
+from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
+from OCC.Core.IFSelect import IFSelect_RetDone
+from OCC.Core.STEPControl import STEPControl_AsIs, STEPControl_Writer
 
 from cad_features.cli import main
+from cad_features.loaders import load_shape
 
 
 def test_cli_rejects_missing_input_file(tmp_path, capsys):
@@ -172,3 +176,22 @@ def test_cli_reports_output_write_failure(tmp_path, capsys, monkeypatch):
     captured = capsys.readouterr()
     assert exit_code == 1
     assert "Failed to write output file" in captured.err
+
+
+
+def write_step_box(path: Path, x: float = 10.0, y: float = 20.0, z: float = 30.0) -> None:
+    shape = BRepPrimAPI_MakeBox(x, y, z).Shape()
+    writer = STEPControl_Writer()
+    writer.Transfer(shape, STEPControl_AsIs)
+    status = writer.Write(str(path))
+    assert status == IFSelect_RetDone
+
+
+
+def test_load_shape_reads_generated_step_box(tmp_path):
+    input_path = tmp_path / "box.step"
+    write_step_box(input_path)
+
+    shape = load_shape(input_path, "step")
+
+    assert not shape.IsNull()
