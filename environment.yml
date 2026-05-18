@@ -1,0 +1,10 @@
+name: cad-features
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pythonocc-core
+  - pytest
+  - pip
+  - pip:
+      - -e .
