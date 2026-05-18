@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 
 import pytest
@@ -6,6 +7,7 @@ from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.STEPControl import STEPControl_AsIs, STEPControl_Writer
 
+from cad_features.analyzer import analyze_shape
 from cad_features.cli import main
 from cad_features.loaders import load_shape
 
@@ -195,3 +197,29 @@ def test_load_shape_reads_generated_step_box(tmp_path):
     shape = load_shape(input_path, "step")
 
     assert not shape.IsNull()
+
+
+def test_analyze_shape_reports_generated_box_geometry(tmp_path):
+    input_path = tmp_path / "box.step"
+    write_step_box(input_path, x=10.0, y=20.0, z=30.0)
+    shape = load_shape(input_path, "step")
+
+    analysis = analyze_shape(shape)
+
+    assert analysis["model"]["is_null"] is False
+    assert analysis["topology"]["solids"] == 1
+    assert analysis["topology"]["faces"] == 6
+    assert analysis["topology"]["edges"] == 12
+    assert analysis["geometry"]["face_surface_types"] == {"plane": 6}
+    assert analysis["geometry"]["edge_curve_types"] == {"line": 12}
+    assert analysis["model"]["bounding_box"]["size"] == pytest.approx(
+        [10.0, 20.0, 30.0], abs=1e-6
+    )
+    assert analysis["model"]["volume"] == pytest.approx(6000.0, rel=1e-6)
+    assert analysis["model"]["area"] == pytest.approx(2200.0, rel=1e-6)
+    assert len(analysis["faces"]) == 6
+    assert len(analysis["edges"]) == 12
+    assert all(face["surface_type"] == "plane" for face in analysis["faces"])
+    assert all(edge["curve_type"] == "line" for edge in analysis["edges"])
+    assert all(math.isfinite(face["area"]) for face in analysis["faces"])
+    assert all(math.isfinite(edge["length"]) for edge in analysis["edges"])
