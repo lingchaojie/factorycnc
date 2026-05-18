@@ -67,10 +67,13 @@ def main(
             faces=analysis["faces"],
             edges=analysis["edges"],
         )
-        output_path.write_text(
-            json.dumps(report, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        try:
+            output_path.write_text(
+                json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            raise OutputFileError(f"Failed to write output file: {output_path}") from exc
     except CadFeaturesError as exc:
         print(f"cad-features: error: {exc}", file=sys.stderr)
         return 1
