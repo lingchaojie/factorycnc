@@ -32,6 +32,8 @@ def validate_paths(input_path: Path, output_path: Path) -> None:
         raise InputFileError(f"Input file does not exist: {input_path}")
     if not output_path.parent.is_dir():
         raise OutputFileError(f"Output directory does not exist: {output_path.parent}")
+    if output_path.is_dir():
+        raise OutputFileError(f"Output path is a directory: {output_path}")
 
 
 def default_analyze_file(path: Path, source_format: str) -> dict[str, Any]:
