@@ -223,3 +223,24 @@ def test_analyze_shape_reports_generated_box_geometry(tmp_path):
     assert all(edge["curve_type"] == "line" for edge in analysis["edges"])
     assert all(math.isfinite(face["area"]) for face in analysis["faces"])
     assert all(math.isfinite(edge["length"]) for edge in analysis["edges"])
+
+
+
+def test_cli_analyzes_generated_step_box_end_to_end(tmp_path):
+    input_path = tmp_path / "box.step"
+    output_path = tmp_path / "report.json"
+    write_step_box(input_path, x=10.0, y=20.0, z=30.0)
+
+    exit_code = main([str(input_path), "--output", str(output_path)])
+
+    assert exit_code == 0
+    report = json.loads(output_path.read_text(encoding="utf-8"))
+    assert report["schema_version"] == "0.1"
+    assert report["source"] == {"path": str(input_path), "format": "step"}
+    assert report["topology"]["solids"] == 1
+    assert report["topology"]["faces"] == 6
+    assert report["geometry"]["face_surface_types"] == {"plane": 6}
+    assert report["model"]["bounding_box"]["size"] == pytest.approx(
+        [10.0, 20.0, 30.0], abs=1e-6
+    )
+    assert report["model"]["volume"] == pytest.approx(6000.0, rel=1e-6)
